@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 import { useAuth } from "@/context/AuthContext";
 
-export default function Index() {
+export default function Profile() {
     const { user, signOut } = useAuth();
 
     return (
