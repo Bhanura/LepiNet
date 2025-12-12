@@ -1,0 +1,95 @@
+import { icons } from "@/constants/icons";
+import { images } from "@/constants/images";
+import { Tabs } from "expo-router";
+import React from "react";
+import { Image } from "react-native";
+
+const _layout = () => {
+    return (
+        <>
+            <Tabs
+                screenOptions={{
+                    tabBarStyle: {
+                        height: 80,
+                        paddingBottom: 10,
+                        paddingTop: 10,
+                    },
+                    tabBarLabelStyle: {
+                        fontSize: 14,
+                    },
+                    tabBarActiveTintColor: "#134a86",
+                    tabBarInactiveTintColor: "#999999",
+                }}
+            >
+                <Tabs.Screen
+                    name="index"
+                    options={{
+                        title: "Check List",
+                        headerShown: true,
+                        headerTitle: "",
+                        headerLeft: () => (
+                            <Image
+                                source={images.logo}
+                                resizeMode="contain"
+                            />
+                        ),
+                        tabBarIcon: ({ color }) => (
+                            <Image
+                                source={icons.checklist}
+                                className="w-6 h-6"
+                                style={{ tintColor: color }}
+                            />
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="explore"
+                    options={{
+                        title: "Explore",
+                        headerShown: true,
+                        headerTitle: "",
+                        headerLeft: () => (
+                            <Image
+                                source={images.logo}
+                                resizeMode="contain"
+                            />
+                        ),
+                        tabBarIcon: ({ color }) => (
+                            <Image
+                                source={icons.explore}
+                                className="w-6 h-6"
+                                style={{ tintColor: color }}
+                            />
+                        ),
+                    }}
+                />
+                <Tabs.Screen
+                    name="profile"
+                    options={{
+                        title: "Profile",
+                        headerShown: false,
+                        headerTitle: "",
+                        tabBarIcon: ({ color }) => (
+                            <Image
+                                source={icons.profile}
+                                className="w-6 h-6"
+                                style={{ tintColor: color }}
+                            />
+                        ),
+                    }}
+                />
+                {/* Hide edit-profile from tab bar */}
+                <Tabs.Screen
+                    name="edit-profile"
+                    options={{
+                        href: null, // This hides it from the tab bar
+                        title: "Edit Profile",
+                        headerShown: true,
+                    }}
+                />
+            </Tabs>
+        </>
+    );
+};
+
+export default _layout;

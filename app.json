@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "LepiNet",
+    "slug": "LepiNet",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/lepinet.png",
+    "scheme": "checklist",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "LepiNet uses your location to tag checklist observations."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyB4h-d5WnRe6V0Jc_WIELxaNRbs8Gc-BiI"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/lepinet.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB4h-d5WnRe6V0Jc_WIELxaNRbs8Gc-BiI"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/lepinet.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you set your profile picture."
+        }
+      ],
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/lepinet.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
