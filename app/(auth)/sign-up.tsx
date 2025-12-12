@@ -1,22 +1,86 @@
-import { useState } from "react";
-import { View, Text, TextInput, Pressable, Alert } from "react-native";
-import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from "expo-image-picker";
+import { Link, useRouter } from "expo-router";
+import { useState } from "react";
+import { Alert, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 export default function SignUp() {
     const { signUp } = useAuth();
     const router = useRouter();
-    const [displayName, setDisplayName] = useState("");
+    
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
+    const [mobile, setMobile] = useState("");
+    const [birthday, setBirthday] = useState("");
+    const [gender, setGender] = useState("");
+    const [educationalLevel, setEducationalLevel] = useState("");
     const [password, setPassword] = useState("");
+    const [imageUri, setImageUri] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Permission denied', 'Sorry, we need camera roll permissions to make this work!');
+            return;
+        }
+
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 0.7,
+        });
+
+        if (!result.canceled) {
+            setImageUri(result.assets[0].uri);
+        }
+    };
 
     const onSubmit = async () => {
+        // Validation
+        if (!firstName || !lastName || !email || !password) {
+            Alert.alert("Missing fields", "Please fill in all required fields.");
+            return;
+        }
+
+        if (password.length < 6) {
+            Alert.alert("Weak password", "Password must be at least 6 characters.");
+            return;
+        }
+        
         try {
             setSubmitting(true);
-            await signUp(email, password, displayName || undefined);
-            router.replace("/(tabs)");
+            
+            console.log("Starting signup process...");
+            
+            await signUp(
+                email,
+                password,
+                imageUri,
+                {
+                    firstName,
+                    lastName,
+                    mobile,
+                    birthday,
+                    gender,
+                    educationalLevel,
+                }
+            );
+            
+            console.log("Signup successful!");
+            
+            Alert.alert(
+                "Sign up successful", 
+                "Please check your email to verify your account before logging in.",
+                [{ text: "OK", onPress: () => router.replace("/(auth)/sign-in") }]
+            );
+            
         } catch (e: any) {
+            console.error("Signup error:", e);
             Alert.alert("Sign up failed", e?.message ?? "Please try again.");
         } finally {
             setSubmitting(false);
@@ -24,18 +88,26 @@ export default function SignUp() {
     };
 
     return (
-        <View className="flex-1 bg-white p-6">
+        <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24 }}>
             <Text className="text-2xl font-semibold mb-6">Create your account</Text>
 
-            <Text className="text-sm text-gray-700 mb-2">Name (optional)</Text>
+            <Text className="text-sm text-gray-700 mb-2">First Name*</Text>
             <TextInput
                 className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
-                value={displayName}
-                onChangeText={setDisplayName}
-                placeholder="Your name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Your first name"
             />
 
-            <Text className="text-sm text-gray-700 mb-2">Email</Text>
+            <Text className="text-sm text-gray-700 mb-2">Last Name*</Text>
+            <TextInput
+                className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Your last name"
+            />
+
+            <Text className="text-sm text-gray-700 mb-2">Email*</Text>
             <TextInput
                 className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
                 autoCapitalize="none"
@@ -45,13 +117,63 @@ export default function SignUp() {
                 placeholder="you@example.com"
             />
 
-            <Text className="text-sm text-gray-700 mb-2">Password</Text>
+            <Text className="text-sm text-gray-700 mb-2">Password*</Text>
+            <View className="relative mb-4">
+                <TextInput
+                    className="border border-gray-300 rounded-lg px-3 py-3 pr-12"
+                    secureTextEntry={!showPassword}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="At least 6 characters"
+                />
+                <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3"
+                    style={{ padding: 4 }}
+                >
+                    <Ionicons 
+                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                        size={24} 
+                        color="#6B7280" 
+                    />
+                </TouchableOpacity>
+            </View>
+
+            <View className="border-t border-gray-200 my-4" />
+
+            <Text className="text-lg font-semibold mb-4">Optional Details</Text>
+
+            <Text className="text-sm text-gray-700 mb-2">Mobile Number</Text>
             <TextInput
                 className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
-                secureTextEntry
-                value={password}
-                onChangeText={setPassword}
-                placeholder="At least 6 characters"
+                keyboardType="phone-pad"
+                value={mobile}
+                onChangeText={setMobile}
+                placeholder="+94 12 345 6789"
+            />
+            
+            <Text className="text-sm text-gray-700 mb-2">Birthday</Text>
+            <TextInput
+                className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
+                value={birthday}
+                onChangeText={setBirthday}
+                placeholder="YYYY-MM-DD"
+            />
+
+            <Text className="text-sm text-gray-700 mb-2">Gender</Text>
+            <TextInput
+                className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
+                value={gender}
+                onChangeText={setGender}
+                placeholder="Male / Female / Other"
+            />
+            
+            <Text className="text-sm text-gray-700 mb-2">Educational Level</Text>
+            <TextInput
+                className="border border-gray-300 rounded-lg px-3 py-3 mb-4"
+                value={educationalLevel}
+                onChangeText={setEducationalLevel}
+                placeholder="e.g., Undergraduate, Graduate"
             />
 
             <Pressable
@@ -69,6 +191,6 @@ export default function SignUp() {
                     <Text className="text-[#134a86]">Already have an account? Sign in</Text>
                 </Link>
             </View>
-        </View>
+        </ScrollView>
     );
 }

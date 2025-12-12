@@ -1,8 +1,8 @@
-import { Stack, Slot, useRouter, useSegments } from "expo-router";
-import './global.css';
-import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
+import './global.css';
 
 function AuthGate() {
   const { user, loading } = useAuth();
@@ -33,6 +33,7 @@ function AuthGate() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="checklist-view" options={{ headerShown: false }} />
       </Stack>
   );
 }

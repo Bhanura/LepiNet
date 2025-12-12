@@ -12,6 +12,9 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "LepiNet uses your location to tag checklist observations."
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyB4h-d5WnRe6V0Jc_WIELxaNRbs8Gc-BiI"
       }
     },
     "android": {
@@ -20,7 +23,15 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION","ACCESS_COARSE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB4h-d5WnRe6V0Jc_WIELxaNRbs8Gc-BiI"
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -28,6 +39,12 @@
       "favicon": "./assets/images/lepinet.png"
     },
     "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you set your profile picture."
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
@@ -37,7 +54,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
