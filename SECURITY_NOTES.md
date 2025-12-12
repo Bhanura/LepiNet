@@ -160,6 +160,11 @@ EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_IOS=your_ios_key
 EXPO_PUBLIC_GOOGLE_MAPS_API_KEY_ANDROID=your_android_key
 ```
 
+#### Hotspot Function (Optional - for explore features)
+```env
+EXPO_PUBLIC_HOTSPOT_FUNCTION_URL=your_hotspot_function_url
+```
+
 #### Firebase (Legacy - Not Needed)
 The following are NO LONGER REQUIRED after migration to Supabase:
 - ~~EXPO_PUBLIC_FIREBASE_API_KEY~~
