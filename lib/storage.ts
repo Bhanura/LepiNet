@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "@supabase/supabase-js";
 import { decode } from 'base64-arraybuffer';
-// FIXED: Import from legacy API
+// Note: Using legacy API - consider migrating to current FileSystem API in future updates
 import * as FileSystem from 'expo-file-system/legacy';
 import { Alert } from "react-native";
 import 'react-native-get-random-values';
@@ -42,7 +42,7 @@ export async function removeDraft(id: string, uid?: string) {
 
 /**
  * Uploads an image to Supabase Storage and returns the public URL.
- * FIXED: Use legacy FileSystem API to avoid deprecation warnings
+ * Note: Currently uses legacy FileSystem API. Consider migrating to current API.
  */
 export const uploadImageAndGetURL = async (
     uri: string, 
@@ -63,7 +63,7 @@ export const uploadImageAndGetURL = async (
 
         console.log("Reading file from:", uri);
 
-        // 2. Read the file as a Base64 string using legacy API
+        // 2. Read the file as a Base64 string (using legacy API, consider updating)
         const base64 = await FileSystem.readAsStringAsync(uri, {
             encoding: FileSystem.EncodingType.Base64,
         });
