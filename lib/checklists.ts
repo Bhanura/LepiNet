@@ -1,33 +1,39 @@
-import { db } from "@/lib/firebase";
-import { doc, serverTimestamp, setDoc } from "firebase/firestore";
-import { getDraftById, getDrafts, saveDrafts, upsertDraft } from "./storage";
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from "uuid";
+import { getDraftById, getDrafts, removeDraft as removeDraftFromStorage, upsertDraft } from "./storage";
+import { supabase } from "./supabase";
 
-export type GeoPoint = { latitude: number; longitude: number; accuracy?: number | null };
+// --- TYPE DEFINITIONS ---
+
+export type GeoPoint = { 
+    latitude: number; 
+    longitude: number; 
+    accuracy?: number | null 
+};
+
 export type ChecklistEntry = {
     id: string;
     speciesName: string;
     count: number;
-    observedAt: string; // ISO
-    location?: GeoPoint | null;
+    location?: GeoPoint;
+    observedAt: number; // Stored as timestamp
 };
+
 export type ChecklistDraft = {
     id: string;
     name: string;
-    createdAt: string; // ISO
-    updatedAt: string; // ISO
+    createdAt: number; // Stored as timestamp
     status: "draft" | "submitted";
     entries: ChecklistEntry[];
 };
 
-const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+// --- LOCAL DRAFT FUNCTIONS ---
 
-export async function createDraft(name: string, uid?: string) {
-    const now = new Date().toISOString();
+export async function createDraft(name: string, uid?: string): Promise<ChecklistDraft> {
     const draft: ChecklistDraft = {
-        id: newId(),
-        name: name.trim() || "Untitled Checklist",
-        createdAt: now,
-        updatedAt: now,
+        id: uuidv4(),
+        name: name || "Untitled Checklist",
+        createdAt: Date.now(),
         status: "draft",
         entries: [],
     };
@@ -35,57 +41,138 @@ export async function createDraft(name: string, uid?: string) {
     return draft;
 }
 
+export async function getAllDrafts(uid?: string): Promise<ChecklistDraft[]> {
+    return await getDrafts(uid) as ChecklistDraft[];
+}
+
 export async function addEntryToDraft(
-    draftId: string,
-    entry: Omit<ChecklistEntry, "id" | "observedAt"> & { observedAt?: string },
+    draftId: string, 
+    entryData: { speciesName: string; count: number; location?: GeoPoint },
     uid?: string
-) {
+): Promise<ChecklistDraft> {
     const draft = await getDraftById(draftId, uid);
-    if (!draft) throw new Error("Draft not found");
-    const e: ChecklistEntry = {
-        id: newId(),
-        speciesName: entry.speciesName,
-        count: entry.count,
-        observedAt: entry.observedAt ?? new Date().toISOString(),
-        location: entry.location ?? null,
+    if (!draft) {
+        throw new Error("Draft not found");
+    }
+
+    const newEntry: ChecklistEntry = {
+        id: uuidv4(),
+        ...entryData,
+        observedAt: Date.now(),
     };
-    draft.entries.unshift(e);
-    draft.updatedAt = new Date().toISOString();
+
+    draft.entries.push(newEntry);
     await upsertDraft(draft, uid);
     return draft;
 }
 
-export async function getAllDrafts(uid?: string) {
-    return (await getDrafts(uid)) as ChecklistDraft[];
+export async function updateEntryInDraft(
+    draftId: string,
+    entryId: string,
+    entryData: { speciesName: string; count: number; location?: GeoPoint },
+    uid?: string
+): Promise<ChecklistDraft> {
+    const draft = await getDraftById(draftId, uid);
+    if (!draft) {
+        throw new Error("Draft not found");
+    }
+
+    const entryIndex = draft.entries.findIndex(e => e.id === entryId);
+    if (entryIndex === -1) {
+        throw new Error("Entry not found");
+    }
+
+    draft.entries[entryIndex] = {
+        ...draft.entries[entryIndex],
+        ...entryData,
+    };
+
+    await upsertDraft(draft, uid);
+    return draft;
 }
 
-export async function submitDraft(draftId: string, uid: string) {
+export async function deleteEntryFromDraft(
+    draftId: string,
+    entryId: string,
+    uid?: string
+): Promise<ChecklistDraft> {
     const draft = await getDraftById(draftId, uid);
-    if (!draft) throw new Error("Draft not found");
-    if (!uid) throw new Error("You must be signed in to submit.");
-    if (!draft.entries.length) throw new Error("Add at least one observation.");
+    if (!draft) {
+        throw new Error("Draft not found");
+    }
 
-    // Persist to Firestore (users/{uid}/checklists/{id})
-    const ref = doc(db, "users", uid, "checklists", draft.id);
-    await setDoc(ref, {
-        id: draft.id,
-        name: draft.name,
-        createdAt: draft.createdAt,
-        updatedAt: new Date().toISOString(),
-        status: "submitted",
-        entries: draft.entries,
-        submittedAt: serverTimestamp(),
+    draft.entries = draft.entries.filter(e => e.id !== entryId);
+    await upsertDraft(draft, uid);
+    return draft;
+}
+
+export async function deleteDraft(draftId: string, uid?: string): Promise<void> {
+    await removeDraftFromStorage(draftId, uid);
+}
+
+// --- SUBMIT TO SUPABASE ---
+
+export async function submitDraft(draftId: string, userId: string): Promise<void> {
+    console.log("--- Submitting checklist to Supabase ---");
+    
+    const draft = await getDraftById(draftId, userId);
+    if (!draft) {
+        throw new Error("Draft not found");
+    }
+    if (draft.entries.length === 0) {
+        throw new Error("Cannot submit an empty checklist.");
+    }
+
+    const now = new Date();
+    const submittedDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const submittedTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+
+    // 1. Insert into submissions table
+    const { data: submission, error: submissionError } = await supabase
+        .from('submissions')
+        .insert({
+            checklist_id: draft.id,
+            user_id: userId,
+            submitted_date: submittedDate,
+            submitted_time: submittedTime,
+            checklist_name: draft.name,
+        })
+        .select()
+        .single();
+
+    if (submissionError) {
+        console.error("Error inserting submission:", submissionError);
+        throw new Error(`Failed to submit checklist: ${submissionError.message}`);
+    }
+
+    console.log("Submission created:", submission.checklist_id);
+
+    // 2. Insert all records
+    const recordsToInsert = draft.entries.map(entry => {
+        const entryDate = new Date(entry.observedAt);
+        return {
+            species_name: entry.speciesName,
+            species_count: entry.count,
+            recorded_date: entryDate.toISOString().split('T')[0],
+            recorded_time: entryDate.toTimeString().split(' ')[0],
+            recorded_location_longitude: entry.location?.longitude || null,
+            recorded_location_latitude: entry.location?.latitude || null,
+            checklist_id: draft.id,
+        };
     });
 
-    // Mark local as submitted (keep it for history)
-    draft.status = "submitted";
-    draft.updatedAt = new Date().toISOString();
+    const { error: recordsError } = await supabase
+        .from('records')
+        .insert(recordsToInsert);
 
-    // Save updated drafts list
-    const list = await getDrafts(uid);
-    const idx = list.findIndex((d: ChecklistDraft) => d.id === draft.id);
-    if (idx >= 0) list[idx] = draft;
-    await saveDrafts(list, uid);
+    if (recordsError) {
+        console.error("Error inserting records:", recordsError);
+        throw new Error(`Failed to submit records: ${recordsError.message}`);
+    }
 
-    return draft;
+    console.log(`${recordsToInsert.length} records inserted successfully`);
+
+    // 3. Delete draft from local storage
+    await removeDraftFromStorage(draftId, userId);
+    console.log("Draft removed from local storage");
 }
