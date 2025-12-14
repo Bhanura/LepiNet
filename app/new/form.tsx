@@ -29,7 +29,7 @@ type LocState = {
 };
 
 export default function ChecklistForm() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, identifiedSpecies } = useLocalSearchParams<{ id: string, identifiedSpecies?: string}>();
     const router = useRouter();
     const { user } = useAuth();
     const uid = user?.id;
@@ -41,6 +41,15 @@ export default function ChecklistForm() {
     const [loc, setLoc] = useState<LocState>({ hasPermission: false, coords: null });
     const [submitting, setSubmitting] = useState(false);
     const [showSpeciesDropdown, setShowSpeciesDropdown] = useState(false);
+
+    // Auto-fill species if coming back from AI identification
+    useEffect(() => {
+            if (identifiedSpecies) {
+                // Auto-select the species returned by the AI
+                setSelectedSpecies(identifiedSpecies);
+                setSpeciesQuery(identifiedSpecies);
+            }
+        }, [identifiedSpecies]);
 
     // Load draft
     useEffect(() => {
@@ -250,12 +259,16 @@ export default function ChecklistForm() {
                                     </Pressable>
                                 </View>
                                 
-                                {/* Dummy Camera Button */}
+                                {/* AI Camera Button */}
                                 <Pressable 
-                                    onPress={() => Alert.alert("Coming Soon", "AI species identification will be added soon!")}
-                                    className="ml-3 mt-6 bg-gray-200 p-3 rounded-lg"
+                                    onPress={() => router.push({
+                                        pathname: "/new/identity",
+                                        // Pass the draft ID so we can come back to this exact draft
+                                        params: { draftId: id }
+                                    })}
+                                    className="ml-3 mt-6 bg-[#134a86] p-3 rounded-lg"
                                 >
-                                    <Ionicons name="camera" size={24} color="#134a86" />
+                                    <Ionicons name="camera" size={24} color="white" />
                                 </Pressable>
                             </View>
 

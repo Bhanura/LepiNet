@@ -42,7 +42,13 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you set your profile picture."
+          "photosPermission": "The app accesses your photos to let you set your profile picture and identify butterflies."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow LepiNet to access your camera to identify butterflies."
         }
       ],
       "expo-router",
