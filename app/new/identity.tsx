@@ -11,7 +11,7 @@ import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } fr
 
 // --- CONFIGURATION ---
 // Set to TRUE to test UI flow with fake data. Set to FALSE to use real AI.
-const MOCK_MODE = false; // Set back to false to test real API
+const MOCK_MODE = false; 
 const AI_API_URL = "https://bhanura-lepinet-backend.hf.space/predict";
 
 export default function IdentifyScreen() {
@@ -21,7 +21,9 @@ export default function IdentifyScreen() {
     const [permission, requestPermission] = useCameraPermissions();
     const [imageUri, setImageUri] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const [result, setResult] = useState<{name: string, confidence: number, id: string} | null>(null);
+    
+    // State to hold the AI result
+    const [result, setResult] = useState<{name: string, confidence: number, id: string, imageUrl: string} | null>(null);
     
     const cameraRef = useRef<CameraView>(null);
 
@@ -97,79 +99,43 @@ export default function IdentifyScreen() {
                     name: 'photo.jpg',
                 } as any);
 
-                console.log("Sending request to AI server (this may take a moment if the server is waking up)...");
-                
-                // Add timeout for long-running requests (HF Spaces can take time to wake up)
+                // Add timeout for long-running requests
                 const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+                const timeout = setTimeout(() => controller.abort(), 60000); 
                 
                 try {
                     const response = await fetch(AI_API_URL, {
                         method: 'POST',
                         body: formData,
-                        headers: { 
-                            'Accept': 'application/json',
-                        },
+                        headers: { 'Accept': 'application/json' },
                         signal: controller.signal,
                     });
                     
                     clearTimeout(timeout);
                     
-                    console.log("Response status:", response.status);
-                    console.log("Response headers:", JSON.stringify(Object.fromEntries(response.headers)));
-                    
-                    // Check if response is JSON before parsing
-                    const contentType = response.headers.get('content-type');
-                    
                     if (!response.ok) {
                         const errorText = await response.text();
-                        console.error("Server error response:", errorText.substring(0, 500));
-                        
-                        // Check if it's a Hugging Face 404 (Space not running)
                         if (response.status === 404 && errorText.includes('huggingface')) {
-                            throw new Error(
-                                'AI Server is not available. The Hugging Face Space might be sleeping or not deployed. ' +
-                                'Please check: https://bhanura-lepinet-backend.hf.space and try again.'
-                            );
+                            throw new Error('AI Server not found. Check if Space is Public.');
                         }
-                        
-                        throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 200)}`);
-                    }
-                    
-                    if (!contentType || !contentType.includes('application/json')) {
-                        const text = await response.text();
-                        console.error("Non-JSON response:", text.substring(0, 500));
-                        throw new Error(`Expected JSON but got ${contentType}. The AI server may not be properly configured.`);
+                        throw new Error(`Server error: ${response.status}`);
                     }
                     
                     data = await response.json();
-                    console.log("AI prediction received:", JSON.stringify(data));
-                    
                     if (data.error) throw new Error(data.error);
+
                 } catch (fetchError: any) {
                     clearTimeout(timeout);
-                    if (fetchError.name === 'AbortError') {
-                        throw new Error('Request timed out. The AI server may be starting up. Please try again in a moment.');
-                    }
                     throw fetchError;
                 }
             }
 
-            // 3. Set Result
+            // 3. Set Result State (including the image URL for later logging)
             setResult({
                 name: data.species_name,
                 confidence: data.confidence,
-                id: data.species_id
-            });
-
-            // 4. Save Log
-            await supabase.from('ai_logs').insert({
-                user_id: user.id,
-                image_url: publicUrl,
-                predicted_id: data.species_id,
-                predicted_confidence: data.confidence,
-                predicted_species_name: data.species_name,
-                user_action: 'PENDING' 
+                id: data.species_id,
+                imageUrl: publicUrl
             });
 
         } catch (e: any) {
@@ -182,6 +148,28 @@ export default function IdentifyScreen() {
     };
 
     const handleDecision = async (accepted: boolean) => {
+        // Log the user's decision to Supabase
+        if (result && user) {
+            console.log(`Logging AI decision: ${accepted ? 'ACCEPTED' : 'REJECTED'}`);
+            
+            const { error } = await supabase
+                .from('ai_logs')
+                .insert({
+                    user_id: user.id,
+                    image_url: result.imageUrl,
+                    predicted_id: result.id,
+                    predicted_confidence: result.confidence,
+                    user_action: accepted ? 'ACCEPTED' : 'REJECTED'
+                });
+
+            if (error) {
+                console.error("Failed to log decision:", error);
+            } else {
+                console.log("Decision logged successfully");
+            }
+        }
+
+        // Handle Navigation
         if (accepted && result) {
              router.dismissTo({
                 pathname: "/new/form",
